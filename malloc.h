@@ -1,6 +1,7 @@
 // Copyright (C) xujaycee@gmail.com
 
 // A implementation of malloc library
+// Quote cmu <cs:app>
 // In use of boundary tags
 
 #define WSIZE 4
@@ -30,5 +31,11 @@
 #define PREV_BLKP(bp) 		((void*)bp - GET_SIZE((void*)bp - DSIZE))
 
 void mm_init();
+
+// DIY version of glibc malloc family
 void * mm_malloc(size_t size);
 void * mm_free(void * ptr);
+void * mm_calloc(size_t n, size_t size);
+void * mm_realloc(void * ptr, size_t size);
+
+
