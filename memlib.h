@@ -20,8 +20,10 @@ void mem_deinit();
 void * mem_sbrk(int incr);
 void mem_reset_brk();
 
-// Get heap point
+// Get the first allocated heap byte 
 void *mem_heap_low();
+
+// Get the last allocated heap byte
 void *mem_heap_high();
 
 

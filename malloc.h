@@ -1,4 +1,34 @@
-#include <stdio.h>
+// Copyright (C) xujaycee@gmail.com
+
+// A implementation of malloc library
+// In use of boundary tags
+
+#define WSIZE 4
+#define DSIZE 8
+#define CHUNKSIZE (1<<12) // default heap size for initialization
+#define OVERHEAD 8
+
+#define MAX(x,y) 		((x)>(y) ? (x) : (y))
 
 
+#define PACK(size, alloc) 	((size) | (alloc))
+
+// Get and Set a word in address p
+#define GET(p) 			(*(size_t*)(p))
+#define SET(p, val) 		(*(size_t*)(p) = val)
+
+// Get the size and allocated fields
+#define GET_SIZE(p) 		(GET(p) & ~0x7)
+#define GET_ALLOC(p)		(GET(p) & 0x1)
+
+// Get the header & footer pointer according to block pointer
+#define HDRP(bp)		((void*)bp - WSIZE)
+#define FTRP(bp)		((void*)bp + GET_SIZE(HDRP(bp)) - DSIZE)
+
+// Get the next & previous block pointer according to block pointer
+#define NEXT_BLKP(bp) 		((void*)bp + GET_SIZE(HDRP(bp)))
+#define PREV_BLKP(bp) 		((void*)bp - GET_SIZE((void*)bp - DSIZE))
+
+void mm_init();
 void * mm_malloc(size_t size);
+void * mm_free(void * ptr);

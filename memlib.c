@@ -20,8 +20,8 @@ void mem_deinit()
 
 void * mem_sbrk(int incr)
 {
-    if (incr < 0) {
-        fprintf (stderr, "Invalid argument, incr=[%d] should >= 0\n",
+    if (incr <= 0) {
+        fprintf (stderr, "Invalid argument, incr=[%d] should > 0\n",
                  incr);
         return (void*)-1;
     }
@@ -40,13 +40,11 @@ void mem_reset_brk()
 
 }
 
-// Get the first heap byte 
 void *mem_heap_low()
 {
     return (void*)heap;
 }
 
-// Get the last heap byte
 void *mem_heap_high()
 {
     return (void*)(mem_brk - 1);
