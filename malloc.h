@@ -17,6 +17,9 @@
 // Get and Set a word in address p
 #define GET(p) 			(*(size_t*)(p))
 #define SET(p, val) 		(*(size_t*)(p) = val)
+// GET8 and SET8 is for portable on 32-bit & 64-bit machines
+#define GET8(p)      		(*(unsigned long *)(p))
+#define SET8(p, val) 		(*(unsigned long *)(p) = (unsigned long)(val))
 
 // Get the size and allocated fields
 #define GET_SIZE(p) 		(GET(p) & ~0x7)

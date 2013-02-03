@@ -4,6 +4,13 @@
 // Global variables
 void * heap_listp;
 void * free_listp;
+
+#define FREE_HEAD		((void*)free_listp)
+#define FREE_TAIL		((void*)free_listp + DSIZE)
+
+#define PREV_FREEP(bp)		((void*)bp)
+#define NEXT_FREEP(bp)		((void*)bp + DSIZE)
+
 // @brief Merge adjacent free blocks by boundary tag
 // @param pb: block pointer
 void * coalesce(void *bp);
@@ -30,10 +37,18 @@ void remove_free_block(void * bp);
 int mm_init()
 {
     mem_init();
-    heap_listp = mem_sbrk(2*DSIZE);
+    heap_listp = mem_sbrk(4*DSIZE);
     if (NULL == heap_listp) {
         return -1;
     }
+    free_listp = heap_listp;
+    
+    // Set free list, begin & end
+    SET8(heap_listp, 0);
+    SET8(heap_listp + DSIZE, 0);
+
+    heap_listp += 2 * DSIZE;
+    
     // Set alignment padding
     SET(heap_listp, 0);
     // Set prologue
@@ -58,7 +73,7 @@ void * mm_malloc(size_t size)
     if (size == 0) {  
         return NULL;
     }
-
+    
     
 }
 
@@ -147,20 +162,29 @@ void * coalesce(void *bp)
 
     if (prev_alloc && next_alloc) {
         // needn't merge
+        insert_free_block(bp);
         return bp;
         
     } else if (!prev_alloc && next_alloc) {
         // Merge previous block
         size += GET_SIZE(HDRP(PREV_BLKP(bp)));
+        remove_free_block(PREV_BLKP(bp));
+        
         SET(HDRP(PREV_BLKP(bp)), PACK(size, 0));
         SET(FTRP(bp), PACK(size, 0));
+        
+        insert_free_block(PREV_BLKP(bp));
         return PREV_BLKP(bp);
         
     } else if (prev_alloc && !next_alloc) {
         // Merge next block
         size +=  GET_SIZE(HDRP(NEXT_BLKP(bp)));
+        remove_free_block(NEXT_BLKP(bp));
+        
         SET(HDRP(bp), PACK(size, 0));
         SET(FTRP(bp), PACK(size, 0));
+
+        insert_free_block(bp);
         return bp;
         
     } else {
@@ -168,8 +192,13 @@ void * coalesce(void *bp)
         size += GET_SIZE(HDRP(PREV_BLKP(bp)))
                 + GET_SIZE(HDRP(NEXT_BLKP(bp)));
 
+        remove_free_block(PREV_BLKP(bp));
+        remove_free_block(NEXT_BLKP(bp));
+        
         SET(HDRP(PREV_BLKP(bp)), PACK(size, 0));
         SET(FTRP(NEXT_BLKP(bp)), PACK(size, 0));
+
+        insert_free_block(PREV_BLKP(bp));
         return PREV_BLKP(bp);
     }
 }
@@ -177,6 +206,69 @@ void * coalesce(void *bp)
 
 void * find_fit(size_t size)
 {
+    if (size == 0) {
+        return NULL;
+    }
 
+    void * bp;
+    for (bp = (void*)GET8(FREE_HEAD);
+         bp != NULL;
+         bp = (void*)GET8(NEXT_FREEP(bp))) {
+        
+        if (size <= GET_SIZE(HDRP(bp))) {
+            return bp;
+        }
+    }
+    return NULL;
+}
 
+void insert_free_block(void * bp)
+{
+    if (NULL == bp) {
+        return;
+    }
+
+    if (NULL == GET8(FREE_HEAD)) {
+        // If free list is empty
+        SET8(FREE_HEAD, bp);
+        SET8(PREV_FREEP(bp), NULL);
+    } else {
+        // Appending free block to the end
+        SET8(NEXT_FREEP(GET8(FREE_TAIL)), bp);
+        SET8(PREV_FREEP(bp), GET8(FREE_TAIL));
+
+    }
+    SET8(PREE_TAIL, bp);
+    SET8(NEXT_FREEP(bp), NULL);
+
+    return;
+}
+
+void remove_free_block(void * bp)
+{
+    if (NULL == bp) {
+        return;
+    }
+
+    if (GET8(PREV_FREEP(bp)) == NULL) {
+        // If the previous pointer to NULL
+        if (GET8(NEXT_FREEP(bp) == NULL)) {
+            // If it's the only block
+            SET8(FREE_HEAD, NULL);
+            SET8(FREE_TAIL, NULL);
+            return ;
+        }
+        SET8(FREE_HEAD, GET8(NEXT_FREEP(bp)));
+        SET8(PREV_FREEP(GET8(NEXT_FREEP(bp))), NULL);
+        
+    } else if (GET8(NEXT_FREEP(bp)) == NULL) {
+        SET8(FREE_TAIL, GET8(PREV_FREEP(bp)));
+        SET8(NEXT_FREEP(GET8(PREV_FREEP(bp))), NULL);
+
+    } else {
+        // In the middle
+        SET8(NEXT_FREEP(GET8(PREV_FREEP(bp))), GET8(NEXT_FREEP(bp)));
+        SET8(PREV_FREEP(GET8(NEXT_FREEP(bp))), GET8(PREV_FREEP(bp)));
+    }
+    return ;
 }
