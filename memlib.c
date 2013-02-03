@@ -23,12 +23,12 @@ void * mem_sbrk(int incr)
     if (incr <= 0) {
         fprintf (stderr, "Invalid argument, incr=[%d] should > 0\n",
                  incr);
-        return (void*)-1;
+        return NULL;
     }
     char * old_brk = mem_brk;
     // In case of insufficient heap space
     if (incr + mem_brk >= mem_max_addr) {
-        return (void*)-1;
+        return NULL;
     }
     mem_brk += incr;
     return (void*)old_brk;

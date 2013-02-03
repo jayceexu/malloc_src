@@ -2,7 +2,7 @@
 
 // A implementation of malloc library
 // Quote cmu <cs:app>
-// In use of boundary tags
+// In use of boundary tags coalescing
 
 #define WSIZE 4
 #define DSIZE 8
@@ -30,7 +30,7 @@
 #define NEXT_BLKP(bp) 		((void*)bp + GET_SIZE(HDRP(bp)))
 #define PREV_BLKP(bp) 		((void*)bp - GET_SIZE((void*)bp - DSIZE))
 
-void mm_init();
+int mm_init();
 
 // DIY version of glibc malloc family
 void * mm_malloc(size_t size);
