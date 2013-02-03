@@ -3,6 +3,16 @@
 
 // Global variables
 void * heap_listp;
+void * free_listp;
+// @brief Merge adjacent free blocks by boundary tag
+// @param pb: block pointer
+void * coalesce(void *bp);
+// @brief extend heap to words of WORD size
+void * extend_heap(size_t words);
+// @brief Find a block with size bytes, use first-fit
+void * find_fit(size_t size);
+void insert_free_block(void * bp);
+void remove_free_block(void * bp);
 
 /*
  * @brief Initialize prologue, epilogue. To the purpose of avoid edge
@@ -42,6 +52,72 @@ int mm_init()
 }
 
 
+void * mm_malloc(size_t size)
+{
+    // size_t won't be negative
+    if (size == 0) {  
+        return NULL;
+    }
+
+    
+}
+
+void * mm_calloc(size_t n, size_t size)
+{
+    size_t bytes = n*size;
+    if (bytes == 0) {
+        return NULL;
+    }
+    char * ptr = (char*)mm_malloc(bytes);
+    if (NULL == ptr) {
+        return NULL;
+    }
+
+    for (size_t i = 0; i < bytes; ++i) {
+        *(ptr + i) = 0;
+    }
+    return ptr;
+}
+
+void * mm_realloc(void * ptr, size_t size)
+{
+    if (NULL == ptr) {
+        return mm_malloc(size);
+    }
+    if (0 == size) {
+        mm_free(ptr);
+        return NULL;
+    }
+    
+    size_t old_size = GET_SIZE(HDRP(ptr)) - OVERHEAD;
+    if (size <= old_size) {
+        // Old space is big enough
+        return ptr;
+    }
+
+    char * new_mem = (char*)mem_malloc(size);
+    if (NULL == new_mem) {
+        return NULL;
+    }
+    // Should only copy old_size bytes
+    memcpy(new_mem, ptr, old_size);
+    mm_free(ptr);
+    return new_mem;
+}
+
+
+void mm_free(void * bp)
+{
+    if (bp == NULL) {
+        return;
+    }
+    size_t size = GET_SIZE(HDRP(bp));
+    SET(HDRP(bp), PACK(size, 0));
+    SET(FTRP(bp), PACK(size, 0));
+    coalesce(bp);
+}
+
+
 void * extend_heap(size_t words)
 {
     // Adjust for double-word alignment
@@ -59,10 +135,11 @@ void * extend_heap(size_t words)
     return coalesce(ptr);
 }
 
-// @brief Merge adjacent free blocks by boundary tag
-// @param pb: block pointer
 void * coalesce(void *bp)
 {
+    if (bp == NULL) {
+        return NULL;
+    }
     size_t prev_alloc = GET_ALLOC(HDRP(PREV_BLKP(bp)));
     size_t next_alloc = GET_ALLOC(HDRP(NEXT_BLKP(bp)));
     
@@ -98,27 +175,8 @@ void * coalesce(void *bp)
 }
 
 
-void * mm_malloc(size_t size)
-{
-    
-    
-}
-
-void * mm_free(void * ptr)
-{
-
-}
-
-
-void * mm_calloc(size_t n, size_t size)
+void * find_fit(size_t size)
 {
 
 
 }
-
-void * mm_realloc(void * ptr, size_t size)
-{
-
-}
-
-
