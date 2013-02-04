@@ -4,6 +4,7 @@
 // Quote cmu <cs:app>
 // In use of boundary tags coalescing
 
+#include <stdio.h>
 #define WSIZE 4
 #define DSIZE 8
 #define CHUNKSIZE (1<<12) // default heap size for initialization

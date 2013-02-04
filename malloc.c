@@ -1,3 +1,4 @@
+#include <string.h>
 #include "malloc.h"
 #include "memlib.h"
 
@@ -64,7 +65,11 @@ int mm_init()
     heap_listp += DSIZE;
 
     // Allocated a free block of CHUNKSIZE bytes
-    if (NULL == extend_heap(CHUNKSIZE/WSIZE)) {
+    void * bp;
+    if ((bp = extend_heap(CHUNKSIZE/WSIZE)) == NULL) {
+        return -1;
+    }
+    if (coalesce(bp) == NULL) {
         return -1;
     }
     return 0;
@@ -91,13 +96,13 @@ void * mm_malloc(size_t size)
         return bp;
     }
 
-    // No fitable free block. Allocate more space
+    // No suitable free block. Allocate more space
     size_t extendsize = MAX(asize, CHUNKSIZE);
     if ((bp = extend_heap(extendsize/WSIZE)) == NULL) {
         return NULL;
     }
     
-    place(bp, extendsize);
+    place(bp, asize);
     
     return bp;
     
@@ -114,7 +119,8 @@ void * mm_calloc(size_t n, size_t size)
         return NULL;
     }
 
-    for (size_t i = 0; i < bytes; ++i) {
+    size_t i = 0;
+    for ( ; i < bytes; ++i) {
         *(ptr + i) = 0;
     }
     return ptr;
@@ -136,7 +142,7 @@ void * mm_realloc(void * ptr, size_t size)
         return ptr;
     }
 
-    char * new_mem = (char*)mem_malloc(size);
+    char * new_mem = (char*)mm_malloc(size);
     if (NULL == new_mem) {
         return NULL;
     }
@@ -165,7 +171,7 @@ void * extend_heap(size_t words)
     size_t bytes = (words % 2) ? (words+1) * WSIZE : words * WSIZE;
     void * ptr = mem_sbrk(bytes);
     if (NULL == ptr) {
-        return -1;
+        return NULL;
     }
     SET(HDRP(ptr), PACK(bytes, 0));  // Set header
     SET(FTRP(ptr), PACK(bytes, 0));  // Set footer
@@ -254,7 +260,7 @@ void insert_free_block(void * bp)
         return;
     }
 
-    if (NULL == GET8(FREE_HEAD)) {
+    if (NULL == (void*)GET8(FREE_HEAD)) {
         // If free list is empty
         SET8(FREE_HEAD, bp);
         SET8(PREV_FREEP(bp), NULL);
@@ -264,7 +270,7 @@ void insert_free_block(void * bp)
         SET8(PREV_FREEP(bp), GET8(FREE_TAIL));
 
     }
-    SET8(PREE_TAIL, bp);
+    SET8(FREE_TAIL, bp);
     SET8(NEXT_FREEP(bp), NULL);
 
     return;
@@ -276,7 +282,7 @@ void remove_free_block(void * bp)
         return;
     }
 
-    if (GET8(PREV_FREEP(bp)) == NULL) {
+    if ((void*)GET8(PREV_FREEP(bp)) == NULL) {
         // If the previous pointer to NULL
         if (GET8(NEXT_FREEP(bp) == NULL)) {
             // If it's the only block
@@ -287,7 +293,7 @@ void remove_free_block(void * bp)
         SET8(FREE_HEAD, GET8(NEXT_FREEP(bp)));
         SET8(PREV_FREEP(GET8(NEXT_FREEP(bp))), NULL);
         
-    } else if (GET8(NEXT_FREEP(bp)) == NULL) {
+    } else if ((void*)GET8(NEXT_FREEP(bp)) == NULL) {
         SET8(FREE_TAIL, GET8(PREV_FREEP(bp)));
         SET8(NEXT_FREEP(GET8(PREV_FREEP(bp))), NULL);
 
