@@ -11,15 +11,19 @@ void * free_listp;
 #define PREV_FREEP(bp)		((void*)bp)
 #define NEXT_FREEP(bp)		((void*)bp + DSIZE)
 
-// @brief Merge adjacent free blocks by boundary tag
-// @param pb: block pointer
+// Merge adjacent free blocks by boundary tag
+// pb: block pointer
 void * coalesce(void *bp);
-// @brief extend heap to words of WORD size
+// Extend heap to words of WORD size
 void * extend_heap(size_t words);
-// @brief Find a block with size bytes, use first-fit
+// Find a block with size bytes, use first-fit
 void * find_fit(size_t size);
 void insert_free_block(void * bp);
 void remove_free_block(void * bp);
+// Remove bp from free block list
+// Split if possible
+void place(void *bp, size_t asize);
+
 
 /*
  * @brief Initialize prologue, epilogue. To the purpose of avoid edge
@@ -74,6 +78,28 @@ void * mm_malloc(size_t size)
         return NULL;
     }
     
+    size_t asize = 0; // Store adjust size
+    if (size <= 2*DSIZE) {
+        asize = OVERHEAD + 2*DSIZE; // 2*Dsize is for prev/next pointer in free block 
+    } else {
+        asize = 2*DSIZE * ((OVERHEAD + size + 2*DSIZE -1) / 2*DSIZE);
+    }
+    void * bp;
+    if ((bp = find_fit(asize)) != NULL) {
+        place(bp, asize);
+        
+        return bp;
+    }
+
+    // No fitable free block. Allocate more space
+    size_t extendsize = MAX(asize, CHUNKSIZE);
+    if ((bp = extend_heap(extendsize/WSIZE)) == NULL) {
+        return NULL;
+    }
+    
+    place(bp, extendsize);
+    
+    return bp;
     
 }
 
@@ -271,4 +297,29 @@ void remove_free_block(void * bp)
         SET8(PREV_FREEP(GET8(NEXT_FREEP(bp))), GET8(PREV_FREEP(bp)));
     }
     return ;
+}
+
+// bp: point to the start of payload
+void place(void * bp, size_t asize)
+{
+    if (bp == NULL) {
+        return;
+    }
+    remove_free_block(bp);
+
+    size_t old_size = GET_SIZE(HDRP(bp));
+    
+    if (old_size - asize >= 2*DSIZE + OVERHEAD) {
+        // remainder part is big enough to split
+        SET(HDRP(bp), PACK(asize, 1));
+        SET(FTRP(bp), PACK(asize, 1));
+        
+        SET(HDRP(NEXT_BLKP(bp)), PACK(old_size - asize, 0));
+        SET(FTRP(NEXT_BLKP(bp)), PACK(old_size - asize, 0));
+        insert_free_block(NEXT_BLKP(bp));
+        
+    } else {
+        SET(HDRP(bp), PACK(old_size, 1));
+        SET(FTRP(bp), PACK(old_size, 1));
+    }
 }
